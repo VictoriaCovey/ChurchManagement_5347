@@ -15,6 +15,13 @@
 # `plan: free` services spin down after 15 minutes of inactivity and cold-start on the next
 # request (expect a ~30-60s delay for the video's "hit the live URL" segment if it's been idle).
 # Switch to `starter` on any service you want to stay warm.
+#
+# All 5 Spring Boot services set JAVA_TOOL_OPTIONS to bound JVM memory (heap, metaspace, code
+# cache, thread stacks) and use SerialGC (smallest footprint, appropriate for a small heap) -
+# without this, an untuned JVM can exceed Render's free-tier 512MB container limit and get
+# SIGKILLed (deploy log shows "exited with status 137"). Each Dockerfile's ENTRYPOINT is a fixed
+# `["java", "-jar", "app.jar"]` array with no shell, so JAVA_OPTS-style vars wouldn't reach the
+# JVM - JAVA_TOOL_OPTIONS works anywhere because the `java` launcher itself reads it.
 
 services:
   - type: web
@@ -64,8 +71,18 @@ services:
     envVars:
       - key: PORT
         value: "8082"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xmx192m -XX:MaxMetaspaceSize=100m -XX:ReservedCodeCacheSize=48m -Xss256k -XX:+UseSerialGC"
       - key: SPRING_PROFILES_ACTIVE
         value: render
+      # Belt-and-suspenders on top of application-render.properties's eureka.client.enabled=false:
+      # env vars are the highest-precedence Spring Boot property source, so this is guaranteed to
+      # take effect regardless of any config-import/profile-file precedence subtlety. Eureka
+      # discovery isn't used under this profile at all (gateway routes via static URLs instead -
+      # see application-render.yml) - a service hanging trying to reach a Eureka server that
+      # doesn't exist on Render is the leading suspect for the startup hangs/137 kills seen here.
+      - key: EUREKA_CLIENT_ENABLED
+        value: "false"
       - key: CONFIG_SERVER_URL
         value: https://churchmgmt-config.onrender.com
       - key: SPRING_CONFIG_IMPORT
@@ -85,8 +102,18 @@ services:
     envVars:
       - key: PORT
         value: "8081"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xmx192m -XX:MaxMetaspaceSize=100m -XX:ReservedCodeCacheSize=48m -Xss256k -XX:+UseSerialGC"
       - key: SPRING_PROFILES_ACTIVE
         value: render
+      # Belt-and-suspenders on top of application-render.properties's eureka.client.enabled=false:
+      # env vars are the highest-precedence Spring Boot property source, so this is guaranteed to
+      # take effect regardless of any config-import/profile-file precedence subtlety. Eureka
+      # discovery isn't used under this profile at all (gateway routes via static URLs instead -
+      # see application-render.yml) - a service hanging trying to reach a Eureka server that
+      # doesn't exist on Render is the leading suspect for the startup hangs/137 kills seen here.
+      - key: EUREKA_CLIENT_ENABLED
+        value: "false"
       - key: CONFIG_SERVER_URL
         value: https://churchmgmt-config.onrender.com
       - key: SPRING_CONFIG_IMPORT
@@ -108,8 +135,18 @@ services:
     envVars:
       - key: PORT
         value: "8083"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xmx192m -XX:MaxMetaspaceSize=100m -XX:ReservedCodeCacheSize=48m -Xss256k -XX:+UseSerialGC"
       - key: SPRING_PROFILES_ACTIVE
         value: render
+      # Belt-and-suspenders on top of application-render.properties's eureka.client.enabled=false:
+      # env vars are the highest-precedence Spring Boot property source, so this is guaranteed to
+      # take effect regardless of any config-import/profile-file precedence subtlety. Eureka
+      # discovery isn't used under this profile at all (gateway routes via static URLs instead -
+      # see application-render.yml) - a service hanging trying to reach a Eureka server that
+      # doesn't exist on Render is the leading suspect for the startup hangs/137 kills seen here.
+      - key: EUREKA_CLIENT_ENABLED
+        value: "false"
       - key: CONFIG_SERVER_URL
         value: https://churchmgmt-config.onrender.com
       - key: SPRING_CONFIG_IMPORT
@@ -129,8 +166,18 @@ services:
     envVars:
       - key: PORT
         value: "8084"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xmx192m -XX:MaxMetaspaceSize=100m -XX:ReservedCodeCacheSize=48m -Xss256k -XX:+UseSerialGC"
       - key: SPRING_PROFILES_ACTIVE
         value: render
+      # Belt-and-suspenders on top of application-render.properties's eureka.client.enabled=false:
+      # env vars are the highest-precedence Spring Boot property source, so this is guaranteed to
+      # take effect regardless of any config-import/profile-file precedence subtlety. Eureka
+      # discovery isn't used under this profile at all (gateway routes via static URLs instead -
+      # see application-render.yml) - a service hanging trying to reach a Eureka server that
+      # doesn't exist on Render is the leading suspect for the startup hangs/137 kills seen here.
+      - key: EUREKA_CLIENT_ENABLED
+        value: "false"
       - key: CONFIG_SERVER_URL
         value: https://churchmgmt-config.onrender.com
       - key: SPRING_CONFIG_IMPORT
@@ -150,10 +197,14 @@ services:
     envVars:
       - key: PORT
         value: "8080"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xmx192m -XX:MaxMetaspaceSize=100m -XX:ReservedCodeCacheSize=48m -Xss256k -XX:+UseSerialGC"
       - key: SSL_ENABLED
         value: "false"
       - key: SPRING_PROFILES_ACTIVE
         value: render
+      - key: EUREKA_CLIENT_ENABLED
+        value: "false"
       - key: KEYCLOAK_BASE_URI
         value: https://churchmgmt-keycloak.onrender.com
       - key: KEYCLOAK_JWK_SET_URI
