@@ -38,6 +38,11 @@ services:
   - type: web
     name: churchmgmt-keycloak
     runtime: docker
+    # Standard (2GB RAM) - Keycloak's own docs recommend 750MB+, and Free/Starter are both
+    # capped at 512MB (Starter only adds CPU, not memory - see earlier discussion). Blueprint
+    # syncs overwrite manually-configured dashboard plan changes with whatever's declared here,
+    # so this has to match what you actually upgraded to or the next push silently reverts it
+    # to free and brings back the OOM.
     plan: standard
     dockerfilePath: ./keycloak/Dockerfile
     dockerContext: ./keycloak
@@ -70,7 +75,7 @@ services:
     healthCheckPath: /actuator/health
     envVars:
       - key: PORT
-        value: "8082"
+        value: "10000"
       - key: JAVA_TOOL_OPTIONS
         value: "-Xmx192m -XX:MaxMetaspaceSize=100m -XX:ReservedCodeCacheSize=48m -Xss256k -XX:+UseSerialGC"
       - key: SPRING_PROFILES_ACTIVE
@@ -101,7 +106,7 @@ services:
     healthCheckPath: /actuator/health
     envVars:
       - key: PORT
-        value: "8081"
+        value: "10000"
       - key: JAVA_TOOL_OPTIONS
         value: "-Xmx192m -XX:MaxMetaspaceSize=100m -XX:ReservedCodeCacheSize=48m -Xss256k -XX:+UseSerialGC"
       - key: SPRING_PROFILES_ACTIVE
@@ -134,7 +139,7 @@ services:
     healthCheckPath: /actuator/health
     envVars:
       - key: PORT
-        value: "8083"
+        value: "10000"
       - key: JAVA_TOOL_OPTIONS
         value: "-Xmx192m -XX:MaxMetaspaceSize=100m -XX:ReservedCodeCacheSize=48m -Xss256k -XX:+UseSerialGC"
       - key: SPRING_PROFILES_ACTIVE
@@ -165,7 +170,7 @@ services:
     healthCheckPath: /actuator/health
     envVars:
       - key: PORT
-        value: "8084"
+        value: "10000"
       - key: JAVA_TOOL_OPTIONS
         value: "-Xmx192m -XX:MaxMetaspaceSize=100m -XX:ReservedCodeCacheSize=48m -Xss256k -XX:+UseSerialGC"
       - key: SPRING_PROFILES_ACTIVE
