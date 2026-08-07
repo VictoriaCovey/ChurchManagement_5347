@@ -69,7 +69,12 @@ services:
   - type: web
     name: churchmgmt-user
     runtime: docker
-    plan: free
+    # Starter, not free - this is a CPU problem, not a memory one: free tier's 0.1 vCPU is too
+    # slow to finish starting this JPA+Security+Sleuth+JMS app before Render's health-check
+    # window gives up (startup logs showed 140-280s just to boot). Starter's 0.5 vCPU (5x) should
+    # close that gap. Declared here, not just clicked in the dashboard, so it doesn't get reverted
+    # on the next blueprint sync (same lesson learned from Keycloak).
+    plan: starter
     dockerfilePath: ./user-service/Dockerfile
     dockerContext: ./user-service
     healthCheckPath: /actuator/health
@@ -100,7 +105,7 @@ services:
   - type: web
     name: churchmgmt-prayer
     runtime: docker
-    plan: free
+    plan: starter
     dockerfilePath: ./prayer-service/Dockerfile
     dockerContext: ./prayer-service
     healthCheckPath: /actuator/health
@@ -133,7 +138,7 @@ services:
   - type: web
     name: churchmgmt-events
     runtime: docker
-    plan: free
+    plan: starter
     dockerfilePath: ./events-service/Dockerfile
     dockerContext: ./events-service
     healthCheckPath: /actuator/health
@@ -164,7 +169,7 @@ services:
   - type: web
     name: churchmgmt-notification
     runtime: docker
-    plan: free
+    plan: starter
     dockerfilePath: ./notification-service/Dockerfile
     dockerContext: ./notification-service
     healthCheckPath: /actuator/health
