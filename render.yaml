@@ -38,7 +38,7 @@ services:
   - type: web
     name: churchmgmt-keycloak
     runtime: docker
-    plan: free
+    plan: standard
     dockerfilePath: ./keycloak/Dockerfile
     dockerContext: ./keycloak
     envVars:
