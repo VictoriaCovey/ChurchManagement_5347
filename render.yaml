@@ -41,6 +41,14 @@ services:
         value: admin
       - key: KEYCLOAK_ADMIN_PASSWORD
         generateValue: true
+      # Keycloak defaults to a heap of 70% of detected container memory, which alone can push
+      # past Render's free-tier 512MB cap before accounting for metaspace/thread/native
+      # overhead. Capping heap tighter leaves more headroom for that overhead. Keycloak's own
+      # docs recommend 750MB+ for this - if this still OOMs, the free tier likely can't run it
+      # and churchmgmt-keycloak specifically needs a paid plan (Render lets you set plan per
+      # service, so only this one needs upgrading).
+      - key: JAVA_OPTS_KC_HEAP
+        value: "-XX:MaxRAMPercentage=50 -XX:MaxMetaspaceSize=150m"
     # Runs in `start-dev` mode (see keycloak/Dockerfile) with no persistent volume attached, so
     # realm data resets to realm-export.json on every restart/redeploy - any changes made through
     # Keycloak's admin console won't survive a redeploy. Fine for this demo; swap in a real
