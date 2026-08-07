@@ -1,0 +1,81 @@
+{
+  "realm": "church-realm",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": true,
+  "verifyEmail": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "smtpServer": {
+    "host": "mailhog",
+    "port": "1025",
+    "from": "noreply@church.local",
+    "fromDisplayName": "Church Management System",
+    "auth": "false",
+    "ssl": "false",
+    "starttls": "false"
+  },
+  "roles": {
+    "realm": [
+      { "name": "PASTOR", "description": "Church pastor - full administrative access" },
+      { "name": "ADMIN", "description": "Church staff administrator" },
+      { "name": "MEMBER", "description": "Registered church member" },
+      { "name": "VISITOR", "description": "Unregistered / guest access" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "church-gateway",
+      "name": "Church Management Gateway",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [ "https://localhost:8080/*", "http://localhost:8080/*" ],
+      "webOrigins": [ "https://localhost:8080", "http://localhost:8080" ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@church.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Church",
+      "lastName": "Admin",
+      "credentials": [
+        { "type": "password", "value": "admin123", "temporary": false }
+      ],
+      "realmRoles": [ "ADMIN" ]
+    },
+    {
+      "username": "pastor",
+      "email": "pastor@church.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Head",
+      "lastName": "Pastor",
+      "credentials": [
+        { "type": "password", "value": "pastor123", "temporary": false }
+      ],
+      "realmRoles": [ "PASTOR" ]
+    },
+    {
+      "username": "member",
+      "email": "member@church.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Regular",
+      "lastName": "Member",
+      "credentials": [
+        { "type": "password", "value": "member123", "temporary": false }
+      ],
+      "realmRoles": [ "MEMBER" ]
+    }
+  ]
+}

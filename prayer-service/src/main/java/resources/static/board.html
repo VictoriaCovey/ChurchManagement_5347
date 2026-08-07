@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Prayer Board</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+    <script src="/webjars/sockjs-client/1.0.2/sockjs.min.js"></script>
+    <script src="/webjars/stomp-websocket/2.3.3/stomp.min.js"></script>
+
+    <style>
+        :root {
+            --navy:      #0c1524;
+            --navy-alt:  #111d30;
+            --gold:      #c9a84c;
+            --gold-lt:   #e0c06a;
+            --parchment: #fdf9f0;
+            --text:      #1c1c1c;
+            --muted:     #7a7a8a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--navy);
+            font-family: 'Lora', Georgia, serif;
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        header {
+            background: var(--navy-alt);
+            border-bottom: 2px solid var(--gold);
+            padding: 24px 20px 18px;
+            text-align: center;
+        }
+
+        .header-cross {
+            font-size: 22px;
+            color: var(--gold);
+            letter-spacing: 14px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        header p {
+            font-family: 'Lora', serif;
+            font-style: italic;
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        /* ── Submit banner ── */
+        .submit-banner {
+            background: linear-gradient(135deg, #1a2a45 0%, #0c1524 100%);
+            border-bottom: 1px solid rgba(201,168,76,0.3);
+            padding: 14px 20px;
+            text-align: center;
+        }
+
+        .submit-banner a {
+            display: inline-block;
+            font-family: 'Cinzel', serif;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--navy);
+            background: var(--gold);
+            padding: 10px 28px;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .submit-banner a:hover { background: var(--gold-lt); }
+
+        /* ── Feed ── */
+        #feed {
+            padding: 24px 16px 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            max-width: 680px;
+            margin: 0 auto;
+        }
+
+        .empty-msg {
+            text-align: center;
+            color: rgba(255,255,255,0.3);
+            font-family: 'Lora', serif;
+            font-style: italic;
+            font-size: 16px;
+            margin-top: 70px;
+            line-height: 2;
+        }
+
+        /* ── Prayer card ── */
+        .card {
+            background: var(--parchment);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+            overflow: hidden;
+            border-top: 3px solid var(--gold);
+            transition: transform 0.15s;
+        }
+
+        .card:hover { transform: translateY(-2px); }
+        .card.new  { border-top-color: var(--gold-lt); }
+
+        .card-body { padding: 20px 24px 22px; }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 14px;
+            gap: 12px;
+        }
+
+        .card-name {
+            font-family: 'Cinzel', serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--navy);
+            letter-spacing: 0.5px;
+        }
+
+        .card-date {
+            font-size: 11px;
+            color: var(--muted);
+            white-space: nowrap;
+            flex-shrink: 0;
+            font-style: italic;
+        }
+
+        .ornament {
+            text-align: center;
+            color: var(--gold);
+            font-size: 12px;
+            letter-spacing: 8px;
+            margin-bottom: 12px;
+        }
+
+        .card-prayer {
+            font-family: 'Lora', serif;
+            font-size: 15px;
+            color: #2a2a2a;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <span class="header-cross">&#10013; &nbsp; &#10013; &nbsp; &#10013;</span>
+    <h1>Prayer Board</h1>
+    <p>Bear one another's burdens — Galatians 6:2</p>
+</header>
+
+<div class="submit-banner">
+    <a href="/submit.html">Submit a Prayer Request</a>
+</div>
+
+<div id="feed"></div>
+
+<script>
+let posts = [];
+
+function formatDate(dt) {
+    if (!dt) return "";
+    return new Date(dt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function escapeHtml(str) {
+    if (!str) return "";
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildCard(p, isNew = false) {
+    const name = escapeHtml(p.requesterName || "Anonymous");
+    const date = p.createdAt ? formatDate(p.createdAt) : "";
+    return `
+        <div class="card${isNew ? ' new' : ''}" id="card-${p.id}">
+            <div class="card-body">
+                <div class="card-header">
+                    <div class="card-name">${name}</div>
+                    ${date ? `<div class="card-date">${date}</div>` : ""}
+                </div>
+                <div class="ornament">&#10022; &nbsp; &#10022; &nbsp; &#10022;</div>
+                <div class="card-prayer">${escapeHtml(p.content || "")}</div>
+            </div>
+        </div>`;
+}
+
+function render() {
+    const feed = document.getElementById("feed");
+    if (posts.length === 0) {
+        feed.innerHTML = '<p class="empty-msg">No prayer requests yet.<br>Be the first to share one.</p>';
+        return;
+    }
+    feed.innerHTML = posts.map(p => buildCard(p)).join("");
+}
+
+async function loadInitial() {
+    try {
+        const res = await fetch("/api/public/prayers");
+        posts = await res.json();
+        render();
+    } catch {
+        document.getElementById("feed").innerHTML = '<p class="empty-msg">Unable to load prayer requests.</p>';
+    }
+}
+
+const socket = new SockJS('/ws');
+const stompClient = Stomp.over(socket);
+stompClient.debug = null;
+
+stompClient.connect({}, function () {
+    stompClient.subscribe('/topic/prayers', function (msg) {
+        const post = JSON.parse(msg.body);
+        if (document.getElementById('card-' + post.id)) return;
+
+        posts.unshift(post);
+
+        const emptyMsg = document.querySelector('.empty-msg');
+        if (emptyMsg) emptyMsg.remove();
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = buildCard(post, true);
+        document.getElementById('feed').prepend(wrapper.firstElementChild);
+    });
+
+    stompClient.subscribe('/topic/recentPrayers', function (msg) {
+        posts = JSON.parse(msg.body);
+        render();
+    });
+});
+
+loadInitial();
+</script>
+
+</body>
+</html>

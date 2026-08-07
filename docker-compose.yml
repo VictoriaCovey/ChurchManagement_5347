@@ -1,0 +1,325 @@
+version: '2.1'
+name: covey_project_5347
+
+services:
+
+  eureka-service:
+    build: ./eureka-service
+    ports:
+      - "8761:8761"
+    networks:
+      backend:
+        aliases:
+          - "eureka-service"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"
+    networks:
+      backend:
+        aliases:
+          - "mailhog"
+
+  keycloak:
+    build: ./keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8180:8080"
+    depends_on:
+      - mailhog
+    networks:
+      backend:
+        aliases:
+          - "keycloak"
+
+  artemis:
+    image: apache/activemq-artemis:2.33.0
+    environment:
+      ARTEMIS_USER: artemis
+      ARTEMIS_PASSWORD: artemis
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+    networks:
+      backend:
+        aliases:
+          - "artemis"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8161 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    ports:
+      - "9411:9411"
+    networks:
+      backend:
+        aliases:
+          - "zipkin"
+
+  gateway-service:
+    build: ./gateway-service
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    environment:
+      EUREKA_SERVER_URL: http://eureka-service:8761/eureka/
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/auth/realms/church-realm/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URI: https://localhost:${GATEWAY_PORT:-8080}/auth/realms/church-realm
+      KEYCLOAK_BASE_URI: http://keycloak:8080
+      ZIPKIN_BASE_URL: http://zipkin:9411
+    depends_on:
+      eureka-service:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      zipkin:
+        condition: service_started
+    restart: on-failure
+    networks:
+      backend:
+        aliases:
+          - "gateway-service"
+
+  config-service:
+    build: ./config-service
+    ports:
+      - "8888:8888"
+    networks:
+      backend:
+        aliases:
+          - "config-service"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8888/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  prayer-service:
+    build: ./prayer-service
+    ports:
+      - "${PRAYER_PORT:-8081}:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${APP_PROFILE:-dev}
+      CONFIG_SERVER_URL: http://config-service:8888
+      SPRING_CONFIG_IMPORT: "optional:configserver:http://config-service:8888"
+      EUREKA_SERVER_URL: http://eureka-service:8761/eureka/
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/auth/realms/church-realm/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URI: https://localhost:${GATEWAY_PORT:-8080}/auth/realms/church-realm
+      ARTEMIS_BROKER_URL: tcp://artemis:61616
+      ARTEMIS_USER: artemis
+      ARTEMIS_PASSWORD: artemis
+      ZIPKIN_BASE_URL: http://zipkin:9411
+    depends_on:
+      config-service:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+      artemis:
+        condition: service_healthy
+      postgres-prayer:
+        condition: service_healthy
+        required: false
+    restart: on-failure
+    networks:
+      backend:
+        aliases:
+          - "prayer-service"
+
+  user-service:
+    build: ./user-service
+    ports:
+      - "${USER_PORT:-8082}:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${APP_PROFILE:-dev}
+      CONFIG_SERVER_URL: http://config-service:8888
+      SPRING_CONFIG_IMPORT: "optional:configserver:http://config-service:8888"
+      EUREKA_SERVER_URL: http://eureka-service:8761/eureka/
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/auth/realms/church-realm/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URI: https://localhost:${GATEWAY_PORT:-8080}/auth/realms/church-realm
+      ZIPKIN_BASE_URL: http://zipkin:9411
+    depends_on:
+      config-service:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+      postgres-user:
+        condition: service_healthy
+        required: false
+    restart: on-failure
+    networks:
+      backend:
+        aliases:
+          - "user-service"
+
+  events-service:
+    build: ./events-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${APP_PROFILE:-dev}
+      CONFIG_SERVER_URL: http://config-service:8888
+      SPRING_CONFIG_IMPORT: "optional:configserver:http://config-service:8888"
+      EUREKA_SERVER_URL: http://eureka-service:8761/eureka/
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/auth/realms/church-realm/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URI: https://localhost:${GATEWAY_PORT:-8080}/auth/realms/church-realm
+      ARTEMIS_BROKER_URL: tcp://artemis:61616
+      ARTEMIS_USER: artemis
+      ARTEMIS_PASSWORD: artemis
+      ZIPKIN_BASE_URL: http://zipkin:9411
+    depends_on:
+      config-service:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+      artemis:
+        condition: service_healthy
+      postgres-events:
+        condition: service_healthy
+        required: false
+    restart: on-failure
+    networks:
+      backend:
+        aliases:
+          - "events-service"
+
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${APP_PROFILE:-dev}
+      CONFIG_SERVER_URL: http://config-service:8888
+      SPRING_CONFIG_IMPORT: "optional:configserver:http://config-service:8888"
+      EUREKA_SERVER_URL: http://eureka-service:8761/eureka/
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/auth/realms/church-realm/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URI: https://localhost:${GATEWAY_PORT:-8080}/auth/realms/church-realm
+      ARTEMIS_BROKER_URL: tcp://artemis:61616
+      ARTEMIS_USER: artemis
+      ARTEMIS_PASSWORD: artemis
+      ZIPKIN_BASE_URL: http://zipkin:9411
+    depends_on:
+      config-service:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+      artemis:
+        condition: service_healthy
+      postgres-notification:
+        condition: service_healthy
+        required: false
+    restart: on-failure
+    networks:
+      backend:
+        aliases:
+          - "notification-service"
+
+  postgres-prayer:
+    image: postgres:15-alpine
+    profiles: ["prod"]
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: "prayerdb"
+      POSTGRES_USER: "prayer"
+      POSTGRES_PASSWORD: "prayer"
+    volumes:
+      - prayer-data:/var/lib/postgresql/data
+    networks:
+      backend:
+        aliases:
+          - "postgres-prayer"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prayer -d prayerdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  postgres-user:
+    image: postgres:15-alpine
+    profiles: ["prod"]
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: "userdb"
+      POSTGRES_USER: "userservice"
+      POSTGRES_PASSWORD: "userservice"
+    volumes:
+      - user-data:/var/lib/postgresql/data
+    networks:
+      backend:
+        aliases:
+          - "postgres-user"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U userservice -d userdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  postgres-events:
+    image: postgres:15-alpine
+    profiles: ["prod"]
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: "eventsdb"
+      POSTGRES_USER: "events"
+      POSTGRES_PASSWORD: "events"
+    volumes:
+      - events-data:/var/lib/postgresql/data
+    networks:
+      backend:
+        aliases:
+          - "postgres-events"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U events -d eventsdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  postgres-notification:
+    image: postgres:15-alpine
+    profiles: ["prod"]
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_DB: "notificationdb"
+      POSTGRES_USER: "notification"
+      POSTGRES_PASSWORD: "notification"
+    volumes:
+      - notification-data:/var/lib/postgresql/data
+    networks:
+      backend:
+        aliases:
+          - "postgres-notification"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notification -d notificationdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  prayer-data:
+  user-data:
+  events-data:
+  notification-data:
+
+networks:
+  backend:
+    driver: bridge

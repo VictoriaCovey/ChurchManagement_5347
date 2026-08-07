@@ -1,0 +1,42 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: auth-route
+          uri: ${KEYCLOAK_BASE_URI}
+          predicates:
+            - Path=/auth/**
+
+        - id: prayer-public-route
+          uri: ${PRAYER_SERVICE_URL}
+          predicates:
+            - Path=/api/public/prayers/**
+
+        - id: prayer-admin-route
+          uri: ${PRAYER_SERVICE_URL}
+          predicates:
+            - Path=/api/admin/prayers/**
+
+        - id: prayer-websocket-route
+          uri: ${PRAYER_SERVICE_URL}
+          predicates:
+            - Path=/ws/**
+
+        - id: user-route
+          uri: ${USER_SERVICE_URL}
+          predicates:
+            - Path=/api/users/**
+
+        - id: events-route
+          uri: ${EVENTS_SERVICE_URL}
+          predicates:
+            - Path=/api/events/**
+
+        - id: notification-route
+          uri: ${NOTIFICATION_SERVICE_URL}
+          predicates:
+            - Path=/api/notifications/**
+
+eureka:
+  client:
+    enabled: false

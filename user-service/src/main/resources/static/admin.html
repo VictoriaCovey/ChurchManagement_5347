@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Leadership Review — Prayer Requests</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+    <script src="/webjars/sockjs-client/1.0.2/sockjs.min.js"></script>
+    <script src="/webjars/stomp-websocket/2.3.3/stomp.min.js"></script>
+    <style>
+        :root {
+            --navy:      #0c1524;
+            --navy-alt:  #111d30;
+            --gold:      #c9a84c;
+            --gold-lt:   #e0c06a;
+            --parchment: #fdf9f0;
+            --text:      #1c1c1c;
+            --muted:     #7a7a8a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Lora', Georgia, serif;
+            background-color: var(--navy);
+            color: white;
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        header {
+            background: var(--navy-alt);
+            border-bottom: 2px solid var(--gold);
+            padding: 20px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .header-cross {
+            font-size: 22px;
+            color: var(--gold);
+            letter-spacing: 6px;
+        }
+
+        header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* ── Feed ── */
+        #posts {
+            padding: 28px 20px 60px;
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .empty-msg {
+            text-align: center;
+            font-family: 'Lora', serif;
+            font-style: italic;
+            color: rgba(255,255,255,0.3);
+            font-size: 18px;
+            margin-top: 70px;
+            line-height: 2;
+        }
+
+        /* ── Review card ── */
+        .post {
+            background: var(--parchment);
+            color: var(--text);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+            border-top: 4px solid var(--gold);
+        }
+
+        .post-body { padding: 24px 28px 22px; }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 16px;
+            gap: 12px;
+        }
+
+        .post-name {
+            font-family: 'Cinzel', serif;
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--navy);
+            letter-spacing: 0.5px;
+        }
+
+        .post-date {
+            font-family: 'Lora', serif;
+            font-style: italic;
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .ornament {
+            text-align: center;
+            color: var(--gold);
+            font-size: 12px;
+            letter-spacing: 8px;
+            margin-bottom: 14px;
+        }
+
+        .post-prayer {
+            font-family: 'Lora', serif;
+            font-size: 15px;
+            color: #2a2a2a;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 12px;
+            border-top: 1px solid #e0d8c8;
+            padding-top: 16px;
+        }
+
+        .btn-approve {
+            flex: 1;
+            padding: 11px;
+            background: var(--navy);
+            color: var(--gold);
+            border: none;
+            border-radius: 4px;
+            font-family: 'Cinzel', serif;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-approve:hover { background: #1a2a45; }
+
+        .btn-reject {
+            flex: 1;
+            padding: 11px;
+            background: #fdecea;
+            color: #8a0000;
+            border: 1px solid #f0c8c8;
+            border-radius: 4px;
+            font-family: 'Cinzel', serif;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-reject:hover { background: #f8d7da; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <span class="header-cross">&#10013; &nbsp; &#10013;</span>
+        <h1>Pending Prayer Requests</h1>
+    </div>
+</header>
+
+<div id="posts"></div>
+
+<script>
+function formatDate(dt) {
+    if (!dt) return "";
+    return new Date(dt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function escapeHtml(str) {
+    if (!str) return "";
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildCard(p) {
+    const name = escapeHtml(p.requesterName || "Anonymous");
+    const date = p.createdAt ? formatDate(p.createdAt) : "";
+    return `
+        <div class="post" id="post-${p.id}">
+            <div class="post-body">
+                <div class="post-header">
+                    <div class="post-name">${name}</div>
+                    ${date ? `<div class="post-date">Submitted ${date}</div>` : ""}
+                </div>
+                <div class="ornament">&#10022; &nbsp; &#10022; &nbsp; &#10022;</div>
+                <div class="post-prayer">${escapeHtml(p.content || "")}</div>
+                <div class="post-actions">
+                    <button class="btn-approve" onclick="approve(${p.id})">Approve</button>
+                    <button class="btn-reject"  onclick="reject(${p.id})">Reject</button>
+                </div>
+            </div>
+        </div>`;
+}
+
+function setEmpty() {
+    const el = document.getElementById('posts');
+    if (!el.querySelector('.post')) {
+        el.innerHTML = '<p class="empty-msg">No pending prayer requests.</p>';
+    }
+}
+
+async function load() {
+    try {
+        const res = await fetch("/api/admin/prayers/pending", { credentials: "same-origin" });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const el = document.getElementById("posts");
+        el.innerHTML = data.length
+            ? data.map(buildCard).join("")
+            : '<p class="empty-msg">No pending prayer requests.</p>';
+    } catch {
+        document.getElementById("posts").innerHTML = "<p class='empty-msg'>Error loading requests.</p>";
+    }
+}
+
+async function approve(id) {
+    await fetch(`/api/admin/prayers/${id}/approve`, { method: "POST", credentials: "same-origin" });
+    document.getElementById("post-" + id)?.remove();
+    setEmpty();
+}
+
+async function reject(id) {
+    await fetch(`/api/admin/prayers/${id}/reject`, { method: "POST", credentials: "same-origin" });
+    document.getElementById("post-" + id)?.remove();
+    setEmpty();
+}
+
+load();
+
+const socket = new SockJS('/ws');
+const stompClient = Stomp.over(socket);
+stompClient.debug = null;
+
+stompClient.connect({}, function () {
+    stompClient.subscribe('/topic/admin/pending', function (msg) {
+        const p = JSON.parse(msg.body);
+        if (document.getElementById('post-' + p.id)) return;
+
+        const emptyMsg = document.querySelector('.empty-msg');
+        if (emptyMsg) emptyMsg.remove();
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = buildCard(p);
+        document.getElementById('posts').prepend(wrapper.firstElementChild);
+    });
+});
+</script>
+
+</body>
+</html>

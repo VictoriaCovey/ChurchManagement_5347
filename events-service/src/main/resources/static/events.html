@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Church Events</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }
+        h1 { color: #333; }
+        .event-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .event-card h3 { margin: 0 0 8px; color: #444; }
+        .event-meta { color: #777; font-size: 0.9em; margin-bottom: 10px; }
+        .event-desc { color: #555; margin-bottom: 12px; }
+        button { background: #5b6af0; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #4a59df; }
+        .section { background: white; border-radius: 8px; padding: 20px; margin-bottom: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input, textarea { width: 100%; padding: 8px; margin: 6px 0 12px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; }
+        label { font-weight: bold; color: #444; }
+        #message { padding: 10px; border-radius: 4px; margin-bottom: 12px; display: none; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Upcoming Church Events</h1>
+
+    <div id="message"></div>
+    <div id="events-list"></div>
+
+    <div class="section">
+        <h2>Register for an Event</h2>
+        <label>Event ID</label>
+        <input type="number" id="reg-event-id" placeholder="Enter event ID">
+        <label>Your Name</label>
+        <input type="text" id="reg-name" placeholder="Your name">
+        <button onclick="register()">Register</button>
+    </div>
+
+    <div class="section">
+        <h2>Create New Event (Admin)</h2>
+        <label>Title</label>
+        <input type="text" id="ev-title" placeholder="Event title">
+        <label>Description</label>
+        <textarea id="ev-desc" rows="3" placeholder="Event description"></textarea>
+        <label>Date & Time</label>
+        <input type="datetime-local" id="ev-date">
+        <label>Location</label>
+        <input type="text" id="ev-location" placeholder="Location">
+        <label>Capacity (optional)</label>
+        <input type="number" id="ev-capacity" placeholder="Leave blank for unlimited">
+        <button onclick="createEvent()">Create Event</button>
+    </div>
+
+    <script>
+        const BASE = 'http://localhost:8083';
+
+        function showMessage(text, type) {
+            const el = document.getElementById('message');
+            el.textContent = text;
+            el.className = type;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 4000);
+        }
+
+        async function loadEvents() {
+            const res = await fetch(`${BASE}/api/events`);
+            const events = await res.json();
+            const list = document.getElementById('events-list');
+            if (events.length === 0) {
+                list.innerHTML = '<p>No upcoming events.</p>';
+                return;
+            }
+            list.innerHTML = events.map(e => `
+                <div class="event-card">
+                    <h3>[${e.id}] ${e.title}</h3>
+                    <div class="event-meta">
+                        ${new Date(e.eventDate).toLocaleString()} &nbsp;|&nbsp; ${e.location || 'Location TBD'}
+                        ${e.capacity ? ` &nbsp;|&nbsp; Capacity: ${e.capacity}` : ''}
+                    </div>
+                    <div class="event-desc">${e.description || ''}</div>
+                </div>
+            `).join('');
+        }
+
+        async function register() {
+            const eventId = document.getElementById('reg-event-id').value;
+            const memberName = document.getElementById('reg-name').value.trim();
+            if (!eventId || !memberName) { showMessage('Please fill in all fields.', 'error'); return; }
+            const res = await fetch(`${BASE}/api/events/${eventId}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ memberName })
+            });
+            if (res.ok) {
+                showMessage('Successfully registered!', 'success');
+            } else {
+                const err = await res.json();
+                showMessage(err.message || 'Registration failed.', 'error');
+            }
+        }
+
+        async function createEvent() {
+            const body = {
+                title: document.getElementById('ev-title').value.trim(),
+                description: document.getElementById('ev-desc').value.trim(),
+                eventDate: document.getElementById('ev-date').value,
+                location: document.getElementById('ev-location').value.trim(),
+                capacity: document.getElementById('ev-capacity').value || null
+            };
+            if (!body.title || !body.eventDate) { showMessage('Title and date are required.', 'error'); return; }
+            const res = await fetch(`${BASE}/api/events`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) {
+                showMessage('Event created!', 'success');
+                document.getElementById('ev-title').value = '';
+                document.getElementById('ev-desc').value = '';
+                document.getElementById('ev-date').value = '';
+                document.getElementById('ev-location').value = '';
+                document.getElementById('ev-capacity').value = '';
+                loadEvents();
+            } else {
+                showMessage('Failed to create event.', 'error');
+            }
+        }
+
+        loadEvents();
+    </script>
+</body>
+</html>

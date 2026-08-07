@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Submit a Prayer Request</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --navy:      #0c1524;
+            --navy-alt:  #111d30;
+            --gold:      #c9a84c;
+            --gold-lt:   #e0c06a;
+            --parchment: #fdf9f0;
+            --text:      #1c1c1c;
+            --muted:     #7a7a8a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--navy);
+            font-family: 'Lora', Georgia, serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 0 60px;
+        }
+
+        /* ── Header ── */
+        header {
+            width: 100%;
+            background: var(--navy-alt);
+            border-bottom: 2px solid var(--gold);
+            padding: 28px 20px 22px;
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .header-cross {
+            font-size: 20px;
+            color: var(--gold);
+            letter-spacing: 14px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        header p {
+            font-family: 'Lora', serif;
+            font-style: italic;
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 8px;
+            line-height: 1.6;
+        }
+
+        /* ── Card ── */
+        .card {
+            background: var(--parchment);
+            border-radius: 8px;
+            padding: 38px 40px;
+            width: 100%;
+            max-width: 580px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            border-top: 4px solid var(--gold);
+        }
+
+        /* ── Ornamental divider ── */
+        .ornament {
+            text-align: center;
+            color: var(--gold);
+            font-size: 13px;
+            letter-spacing: 10px;
+            margin: 24px 0;
+        }
+
+        /* ── Messages ── */
+        .success-msg {
+            display: none;
+            background: #edf7ed;
+            color: #2d6a2d;
+            border: 1px solid #b2d9b2;
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin-bottom: 22px;
+            font-family: 'Lora', serif;
+            font-style: italic;
+            font-size: 14px;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .error-msg {
+            display: none;
+            background: #fdecea;
+            color: #a00;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 22px;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        /* ── Form ── */
+        .form-group { margin-bottom: 22px; }
+
+        label {
+            display: block;
+            font-family: 'Cinzel', serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 8px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        label .optional {
+            font-family: 'Lora', serif;
+            font-style: italic;
+            font-weight: normal;
+            color: var(--muted);
+            text-transform: none;
+            letter-spacing: 0;
+            font-size: 12px;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid #d8d0c0;
+            border-radius: 4px;
+            font-family: 'Lora', serif;
+            font-size: 15px;
+            color: var(--text);
+            background: #fff;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(201,168,76,0.15);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 150px;
+            line-height: 1.7;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--gold);
+            color: var(--navy);
+            border: none;
+            border-radius: 4px;
+            font-family: 'Cinzel', serif;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover { background: var(--gold-lt); }
+
+        /* ── Footer link ── */
+        .board-link {
+            margin-top: 22px;
+            font-family: 'Lora', serif;
+            font-style: italic;
+            font-size: 13px;
+            color: rgba(255,255,255,0.4);
+            text-align: center;
+        }
+
+        .board-link a {
+            color: var(--gold);
+            text-decoration: none;
+        }
+
+        .board-link a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<header>
+    <span class="header-cross">&#10013; &nbsp; &#10013; &nbsp; &#10013;</span>
+    <h1>Prayer Request</h1>
+    <p>Submit a request to be shared with the congregation.<br>
+       All requests are reviewed by church leadership before posting.</p>
+</header>
+
+<div class="card">
+    <div class="success-msg" id="success-msg">
+        Your prayer request has been submitted.<br>Our team will review it shortly. You are in our prayers.
+    </div>
+    <div class="error-msg" id="error-msg">Something went wrong. Please try again.</div>
+
+    <form id="form">
+        <div class="form-group">
+            <label for="name">Username <span class="optional">— registered members only, leave blank to post anonymously</span></label>
+            <input type="text" id="name" placeholder="e.g. vcovey">
+        </div>
+
+        <div class="ornament">&#10022; &nbsp; &#10022; &nbsp; &#10022;</div>
+
+        <div class="form-group">
+            <label for="content">Prayer Request</label>
+            <textarea id="content" placeholder="Share what you would like the congregation to pray for…" required></textarea>
+        </div>
+
+        <button type="submit" class="submit-btn">Submit Prayer Request</button>
+    </form>
+</div>
+
+<div class="board-link">
+    <a href="/board.html">View the prayer board &rarr;</a>
+</div>
+
+<script>
+document.getElementById('form').onsubmit = async (e) => {
+    e.preventDefault();
+
+    const name    = document.getElementById('name').value.trim();
+    const content = document.getElementById('content').value.trim();
+
+    if (!content) {
+        document.getElementById('error-msg').textContent = 'Please enter a prayer request.';
+        document.getElementById('error-msg').style.display = 'block';
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/public/prayers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                requesterName: name || 'Anonymous',
+                content: content
+            })
+        });
+
+        if (!res.ok) throw new Error();
+
+        document.getElementById('success-msg').style.display = 'block';
+        document.getElementById('error-msg').style.display   = 'none';
+        document.getElementById('form').reset();
+    } catch {
+        document.getElementById('error-msg').textContent = 'Something went wrong. Please try again.';
+        document.getElementById('error-msg').style.display   = 'block';
+        document.getElementById('success-msg').style.display = 'none';
+    }
+};
+</script>
+
+</body>
+</html>

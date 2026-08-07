@@ -1,0 +1,23 @@
+server:
+  port: 8083
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgres-events}:5432/eventsdb
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USER:events}
+    password: ${DB_PASS:events}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+
+logging:
+  level:
+    org.springframework: INFO
+    covey: INFO

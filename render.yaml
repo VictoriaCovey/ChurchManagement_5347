@@ -1,0 +1,162 @@
+# Render Blueprint - deploys the core, HTTP-facing part of the app (gateway, the 4 business
+# services, config-service, keycloak). Deliberately excludes eureka-service, artemis, and zipkin:
+# - eureka-service isn't needed here because these services talk to each other over static
+#   Render URLs in the "render" Spring profile (see gateway-service/application-render.yml)
+#   instead of Eureka service discovery, which would otherwise need to resolve instances across
+#   the public internet.
+# - artemis (JMS) speaks a raw TCP protocol, not HTTP, so it can't sit behind Render's standard
+#   web-service ingress. The JMS + tracing portion of the demo runs against the local
+#   `docker compose up` stack instead (same code either way - see the video script for why).
+#
+# Service URLs below assume the `name:` values are available on Render (i.e. no one else has
+# already claimed churchmgmt-*.onrender.com). If a name is taken, change both the `name:` field
+# and every env var below that references that URL.
+#
+# `plan: free` services spin down after 15 minutes of inactivity and cold-start on the next
+# request (expect a ~30-60s delay for the video's "hit the live URL" segment if it's been idle).
+# Switch to `starter` on any service you want to stay warm.
+
+services:
+  - type: web
+    name: churchmgmt-config
+    runtime: docker
+    plan: free
+    dockerfilePath: ./config-service/Dockerfile
+    dockerContext: ./config-service
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8888"
+
+  - type: web
+    name: churchmgmt-keycloak
+    runtime: docker
+    plan: free
+    dockerfilePath: ./keycloak/Dockerfile
+    dockerContext: ./keycloak
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: KEYCLOAK_ADMIN
+        value: admin
+      - key: KEYCLOAK_ADMIN_PASSWORD
+        generateValue: true
+    # Runs in `start-dev` mode (see keycloak/Dockerfile) with no persistent volume attached, so
+    # realm data resets to realm-export.json on every restart/redeploy - any changes made through
+    # Keycloak's admin console won't survive a redeploy. Fine for this demo; swap in a real
+    # database + `kc.sh start` for anything longer-lived.
+
+  - type: web
+    name: churchmgmt-user
+    runtime: docker
+    plan: free
+    dockerfilePath: ./user-service/Dockerfile
+    dockerContext: ./user-service
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8082"
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: CONFIG_SERVER_URL
+        value: https://churchmgmt-config.onrender.com
+      - key: SPRING_CONFIG_IMPORT
+        value: "optional:configserver:https://churchmgmt-config.onrender.com"
+      - key: KEYCLOAK_JWK_SET_URI
+        value: https://churchmgmt-keycloak.onrender.com/auth/realms/church-realm/protocol/openid-connect/certs
+      - key: KEYCLOAK_ISSUER_URI
+        value: https://churchmgmt-keycloak.onrender.com/auth/realms/church-realm
+
+  - type: web
+    name: churchmgmt-prayer
+    runtime: docker
+    plan: free
+    dockerfilePath: ./prayer-service/Dockerfile
+    dockerContext: ./prayer-service
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8081"
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: CONFIG_SERVER_URL
+        value: https://churchmgmt-config.onrender.com
+      - key: SPRING_CONFIG_IMPORT
+        value: "optional:configserver:https://churchmgmt-config.onrender.com"
+      - key: KEYCLOAK_JWK_SET_URI
+        value: https://churchmgmt-keycloak.onrender.com/auth/realms/church-realm/protocol/openid-connect/certs
+      - key: KEYCLOAK_ISSUER_URI
+        value: https://churchmgmt-keycloak.onrender.com/auth/realms/church-realm
+      - key: USER_SERVICE_URL
+        value: https://churchmgmt-user.onrender.com
+
+  - type: web
+    name: churchmgmt-events
+    runtime: docker
+    plan: free
+    dockerfilePath: ./events-service/Dockerfile
+    dockerContext: ./events-service
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8083"
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: CONFIG_SERVER_URL
+        value: https://churchmgmt-config.onrender.com
+      - key: SPRING_CONFIG_IMPORT
+        value: "optional:configserver:https://churchmgmt-config.onrender.com"
+      - key: KEYCLOAK_JWK_SET_URI
+        value: https://churchmgmt-keycloak.onrender.com/auth/realms/church-realm/protocol/openid-connect/certs
+      - key: KEYCLOAK_ISSUER_URI
+        value: https://churchmgmt-keycloak.onrender.com/auth/realms/church-realm
+
+  - type: web
+    name: churchmgmt-notification
+    runtime: docker
+    plan: free
+    dockerfilePath: ./notification-service/Dockerfile
+    dockerContext: ./notification-service
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8084"
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: CONFIG_SERVER_URL
+        value: https://churchmgmt-config.onrender.com
+      - key: SPRING_CONFIG_IMPORT
+        value: "optional:configserver:https://churchmgmt-config.onrender.com"
+      - key: KEYCLOAK_JWK_SET_URI
+        value: https://churchmgmt-keycloak.onrender.com/auth/realms/church-realm/protocol/openid-connect/certs
+      - key: KEYCLOAK_ISSUER_URI
+        value: https://churchmgmt-keycloak.onrender.com/auth/realms/church-realm
+
+  - type: web
+    name: churchmgmt-gateway
+    runtime: docker
+    plan: free
+    dockerfilePath: ./gateway-service/Dockerfile
+    dockerContext: ./gateway-service
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: SSL_ENABLED
+        value: "false"
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: KEYCLOAK_BASE_URI
+        value: https://churchmgmt-keycloak.onrender.com
+      - key: KEYCLOAK_JWK_SET_URI
+        value: https://churchmgmt-keycloak.onrender.com/auth/realms/church-realm/protocol/openid-connect/certs
+      - key: KEYCLOAK_ISSUER_URI
+        value: https://churchmgmt-keycloak.onrender.com/auth/realms/church-realm
+      - key: PRAYER_SERVICE_URL
+        value: https://churchmgmt-prayer.onrender.com
+      - key: USER_SERVICE_URL
+        value: https://churchmgmt-user.onrender.com
+      - key: EVENTS_SERVICE_URL
+        value: https://churchmgmt-events.onrender.com
+      - key: NOTIFICATION_SERVICE_URL
+        value: https://churchmgmt-notification.onrender.com
