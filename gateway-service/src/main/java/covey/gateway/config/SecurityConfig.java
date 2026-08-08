@@ -3,6 +3,7 @@ package covey.gateway.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
@@ -49,6 +50,14 @@ public class SecurityConfig {
                 .authorizeExchange(exchanges -> exchanges
                         .matchers(ServerWebExchangeMatchers.pathMatchers(
                                 "/auth/**", "/api/public/**", "/actuator/health", "/ws/**"))
+                        .permitAll()
+                        // events-service's own SecurityConfig already makes browsing events
+                        // public (GET /api/events/**) - the gateway was more restrictive than
+                        // the service behind it, rejecting anonymous browsing before it ever
+                        // reached events-service. Writes still fall through to the authenticated
+                        // catch-all below, and events-service enforces the real ADMIN/PASTOR
+                        // check on those independently either way.
+                        .matchers(ServerWebExchangeMatchers.pathMatchers(HttpMethod.GET, "/api/events/**"))
                         .permitAll()
                         .matchers(ServerWebExchangeMatchers.pathMatchers("/api/admin/**"))
                         .hasAnyRole("ADMIN", "PASTOR")
